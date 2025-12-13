@@ -1,6 +1,7 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from './mongodb';
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { db } = await connectToDatabase();
   const usersCollection = db.collection('users');
 

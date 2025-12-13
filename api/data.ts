@@ -1,7 +1,8 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from './mongodb';
 import { DEFAULT_ADMIN } from '../constants';
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { db } = await connectToDatabase();
     

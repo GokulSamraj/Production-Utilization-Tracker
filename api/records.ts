@@ -1,6 +1,7 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from './mongodb';
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { db } = await connectToDatabase();
   const recordsCollection = db.collection('records');
 
@@ -33,7 +34,8 @@ export default async function handler(req, res) {
         res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-  } catch (error) {
+  } catch (error)
+  {
     console.error('API Records Error:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
