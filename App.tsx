@@ -3,8 +3,6 @@ import { Login } from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
 import { UserDashboard } from './components/UserDashboard';
 import { User, ProductionRecord, UserRole } from './types';
-import { DEFAULT_ADMIN } from './constants';
-import { v4 as uuidv4 } from 'uuid';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -12,57 +10,50 @@ function App() {
   const [records, setRecords] = useState<ProductionRecord[]>([]);
   const [loginError, setLoginError] = useState('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage on mount
+  // Load data from the backend API on mount
   useEffect(() => {
-    const storedUsers = localStorage.getItem('app_users');
-    const storedRecords = localStorage.getItem('app_records');
-
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      setUsers([DEFAULT_ADMIN]);
-    }
-
-    if (storedRecords) {
+    const fetchData = async () => {
       try {
-        const parsed = JSON.parse(storedRecords);
-        if (Array.isArray(parsed)) {
-             // Sanitize: Ensure all records have IDs
-             const sanitized = parsed.map((r: any) => ({
-                 ...r,
-                 id: r.id || uuidv4() 
-             }));
-             setRecords(sanitized);
+        const response = await fetch('/api/data');
+        if (!response.ok) {
+          throw new Error('Failed to fetch initial data');
         }
-      } catch (e) {
-        console.error("Failed to parse records", e);
+        const { users, records } = await response.json();
+        setUsers(users);
+        setRecords(records);
+      } catch (error) {
+        console.error("API Error:", error);
+        setLoginError("Could not connect to the server.");
+      } finally {
+        setIsDataLoaded(true);
+        setIsLoading(false);
       }
-    }
-    setIsDataLoaded(true);
+    };
+    fetchData();
   }, []);
 
-  // Persist data ONLY after initial load is complete
-  useEffect(() => {
-    if (isDataLoaded) {
-        if (users.length > 0) localStorage.setItem('app_users', JSON.stringify(users));
-    }
-  }, [users, isDataLoaded]);
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-  useEffect(() => {
-    if (isDataLoaded) {
-        localStorage.setItem('app_records', JSON.stringify(records));
-    }
-  }, [records, isDataLoaded]);
+      if (!response.ok) {
+        const { message } = await response.json();
+        setLoginError(message || 'Invalid credentials');
+        return;
+      }
 
-
-  const handleLogin = (u: string, p: string) => {
-    const foundUser = users.find(user => user.username === u && user.password === p);
-    if (foundUser) {
+      const foundUser = await response.json();
       setUser(foundUser);
       setLoginError('');
-    } else {
-      setLoginError('Invalid credentials');
+    } catch (error) {
+      console.error('Login failed:', error);
+      setLoginError('An error occurred during login.');
     }
   };
 
@@ -70,31 +61,80 @@ function App() {
     setUser(null);
   };
 
-  const handleAddUser = (newUser: User) => {
-    setUsers(prev => [...prev, newUser]);
-  };
-
-  const handleUpdateUser = (updatedUser: User) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (user && user.id === updatedUser.id) {
-      setUser(updatedUser);
+  const handleAddUser = async (newUser: User) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+      const addedUser = await response.json();
+      setUsers(prev => [...prev, addedUser]);
+    } catch (error) {
+      console.error('Failed to add user:', error);
     }
   };
 
-  const handleAddRecord = (newRecord: ProductionRecord) => {
-    setRecords(prev => [...prev, newRecord]);
+  const handleUpdateUser = async (updatedUser: User) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedUser),
+      });
+      const returnedUser = await response.json();
+      setUsers(prev => prev.map(u => u.id === returnedUser.id ? returnedUser : u));
+      if (user && user.id === returnedUser.id) {
+        setUser(returnedUser);
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    }
   };
 
-  const handleUpdateRecord = (updatedRecord: ProductionRecord) => {
-    setRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
+  const handleAddRecord = async (newRecord: ProductionRecord) => {
+    try {
+      const response = await fetch('/api/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRecord),
+      });
+      const addedRecord = await response.json();
+      setRecords(prev => [...prev, addedRecord]);
+    } catch (error) {
+      console.error('Failed to add record:', error);
+    }
   };
 
-  const handleDeleteRecord = (id: string) => {
-    setRecords(prev => prev.filter(r => r.id !== id));
+  const handleUpdateRecord = async (updatedRecord: ProductionRecord) => {
+    try {
+      const response = await fetch('/api/records', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedRecord),
+      });
+      const returnedRecord = await response.json();
+      setRecords(prev => prev.map(r => r.id === returnedRecord.id ? returnedRecord : r));
+    } catch (error) {
+      console.error('Failed to update record:', error);
+    }
   };
 
-  if (!isDataLoaded) {
-    return <div className="min-h-screen bg-mac-bg flex items-center justify-center text-white">Loading...</div>;
+  const handleDeleteRecord = async (id: string) => {
+    try {
+      await fetch('/api/records', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setRecords(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Failed to delete record:', error);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-mac-bg flex items-center justify-center text-white">Connecting to database...</div>;
   }
 
   if (!user) {

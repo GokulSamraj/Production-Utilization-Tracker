@@ -61,6 +61,20 @@
         from { transform: translateX(-100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
       }
+       .animate-fade-in-up {
+        animation: fadeInUp 0.3s ease-out;
+       }
+       @keyframes fadeInUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+       }
+       .animate-fade-in {
+        animation: fadeIn 0.5s ease-out;
+       }
+       @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+       }
       /* Force dark dropdowns options */
       select option {
         background-color: #0d1117;
@@ -79,7 +93,9 @@
     "uuid": "https://esm.sh/uuid@9.0.1",
     "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
     "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "jspdf": "https://esm.sh/jspdf@2.5.1"
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "mongodb": "https://esm.sh/mongodb@6.5.0",
+    "bson": "https://esm.sh/bson@6.5.0"
   }
 }
 </script>
