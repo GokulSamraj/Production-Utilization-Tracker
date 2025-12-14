@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ProductionRecord } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 
 const SYSTEM_INSTRUCTION = `
   You are an expert Data Analyst for a team production dashboard.
