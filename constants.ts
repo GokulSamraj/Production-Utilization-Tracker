@@ -3,34 +3,75 @@ import { UserRole } from './types';
 // Helper to unique and sort
 const uniqueSort = (arr: string[]) => Array.from(new Set(arr)).sort((a, b) => a.localeCompare(b));
 
-const rawProcessNames = [
-  "Electronics and solar one and one workshop",
-  "calls and chats",
-  "One-on-one workshop",
-  "Chitti offline willingness",
-  "Address verification",
-  "Trainer Connect",
-  "Others",
-  "Training",
-  "PMC Onboarding",
-  "PTM",
-  "Meeting",
-  "Onboarding",
-  "Calls",
-  "KIT",
-  "Workshops",
-  "Progression",
-  "Attendance",
-  "Schedules",
-  "Payments",
-  "Inbound/Outbound Calls",
-  "Chat",
-  "Email",
-  "Followup Calls",
-  "US Onboarding",
-  "Young Scientist Onboarding",
-  "Makers School Onboarding"
+export interface TaskDefinition {
+  name: string;
+  time: number | 'runtime';
+}
+
+/**
+ * Parses a time string (e.g., "4 min / Section") into a decimal hour value.
+ * Returns 'runtime' if the time is variable.
+ * @param timeStr The string to parse.
+ * @returns A number (decimal hours) or the string 'runtime'.
+ */
+const parseTime = (timeStr: string): number | 'runtime' => {
+  if (timeStr.toLowerCase().includes('based on run time')) {
+    return 'runtime';
+  }
+  const match = timeStr.match(/(\d+)/);
+  if (match) {
+    const minutes = parseInt(match[1], 10);
+    // Convert minutes to decimal hours and round to 2 decimal places
+    return Math.round((minutes / 60) * 100) / 100;
+  }
+  return 'runtime';
+};
+
+const rawTasksFromCSV = [
+  { task: "Time Table Creation", time: "4 min / Section" },
+  { task: "Materials Required Sending", time: "5 min / Section" },
+  { task: "Live Class Scheduling", time: "3 mins/class" },
+  { task: "Live Class Schedule Checking", time: "2 mins/Class" },
+  { task: "Course Access Message", time: "4 min / Section" },
+  { task: "Absent Sheet Updation / Message Sending", time: "5 min / Section" },
+  { task: "Progression Sheet Updation / Message Sending", time: "5 min / Section" },
+  { task: "Assignment Remainder Message", time: "4 min / Section" },
+  { task: "Assessment Remainder Message", time: "5 min / Section" },
+  { task: "Frequent Absentees Call", time: "3 mins/ call" },
+  { task: "Absentees chat updation in sheet / Reply", time: "1 min / Message" },
+  { task: "Course absentees sheet Updation", time: "5 min / Section" },
+  { task: "Course absentees Call", time: "5 min / Student" },
+  { task: "Course Feedback message", time: "3 min / Class" },
+  { task: "PTM Schedule Template Making", time: "3 mins/ call" },
+  { task: "PTM Schedule Sending", time: "2 mins/Class" },
+  { task: "PTM Absent sheet updation / Message sending", time: "3 mins/class" },
+  { task: "PTM Reschedule Sheet Updation", time: "2 min / Student" },
+  { task: "PTM Reschedule Call", time: "7 min / Student" },
+  { task: "Batch Changing", time: "3 mins/ Student" },
+  { task: "Whatsapp Message Number Changing", time: "2 mins/ Student" },
+  { task: "Kit Address Sheet Updation", time: "7 Min / Section" },
+  { task: "Graduation and Event calls", time: "4 mins/ Student" },
+  { task: "Leave Holiday message", time: "30 min Overall" },
+  { task: "Hold Calls", time: "5 min / Student" },
+  { task: "Course Preparation Message From Trainer Team", time: "Based on run time" },
+  { task: "Competition Message From Trainers Team", time: "Based on run time" },
+  { task: "Trainer Follow Up Messages", time: "Based on run time" },
+  { task: "Trainer Follow Up calls", time: "Based on run time" },
+  { task: "Innovation Club Messages", time: "3 mins/class" },
+  { task: "Morning Club Inaguration Message", time: "3 mins/class" },
+  { task: "Payment Follow Sheet - Sales Team", time: "7 min / Section" },
+  { task: "Discontinue Process From Sales Team", time: "2 Min / Student" },
+  { task: "Other", time: "Based on run time" },
 ];
+
+export const TASKS_WITH_TIME: TaskDefinition[] = [
+    ...rawTasksFromCSV.map(t => ({
+        name: t.task,
+        time: parseTime(t.time)
+    })),
+    { name: 'Custom', time: 'runtime' } // Add the custom option
+];
+
 
 const rawTeams = [
   "Stem Educational Program Onboarding",
@@ -42,42 +83,6 @@ const rawTeams = [
   "Chitti Future School Operations"
 ];
 
-const rawTasks = [
-  "Invoice creation",
-  "Attendance followup calls",
-  "Scheduling",
-  "API Queries",
-  "School -followup calls",
-  "Meetings",
-  "School Tool onboarding",
-  "Batch allocation calls",
-  "Tickets Resolving",
-  "Inbound Calls",
-  "Attendance Updation",
-  "Live Class Quality Check",
-  "Progression Follow-up Calls",
-  "Class Reminders Schedule QC",
-  "Setting Workshop reminders",
-  "Kit Requesting address",
-  "Kit Changing address",
-  "Kit Followups/Queries",
-  "Pick Mycareer Calls/Whatsapp/Email",
-  "Retention Calls",
-  "Makers Absentees Creation",
-  "Progression Updation",
-  "Live class Schedule check",
-  "PTM Schedule",
-  "Workshop",
-  "PTM Reschedule",
-  "Others",
-  "Overall sheet- attendance & progress",
-  "Course Access",
-  "Time table",
-  "Slack queries",
-  "Gallabox Messages",
-  "certificate"
-];
-
 const rawFrequency = [
   "Daily",
   "Weekly",
@@ -86,14 +91,8 @@ const rawFrequency = [
   "Yearly"
 ];
 
-// Append "Custom" to the end of lists if needed, or handle in UI
-export const PROCESS_NAMES = [...uniqueSort(rawProcessNames), "Custom"];
 export const TEAMS = uniqueSort(rawTeams);
-export const TASKS = [...uniqueSort(rawTasks), "Custom"];
 export const FREQUENCIES = uniqueSort(rawFrequency);
-
-// Unified list for Data Entry
-export const COMBINED_WORK_TYPES = [...uniqueSort([...rawProcessNames, ...rawTasks]), "Custom"];
 
 export const DEFAULT_ADMIN = {
   id: 'admin-001',

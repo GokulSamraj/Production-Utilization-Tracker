@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User, ProductionRecord, UserRole } from '../types';
-import { TEAMS, PROCESS_NAMES, TASKS, FREQUENCIES, COMBINED_WORK_TYPES } from '../constants';
+import { TEAMS, FREQUENCIES, TASKS_WITH_TIME } from '../constants';
 import { ChatBot } from './ChatBot';
 import { TimeStudy } from './TimeStudy';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -48,8 +48,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ProductionRecord>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isEditTimeCustom, setIsEditTimeCustom] = useState(false);
 
   const overviewRef = useRef<HTMLDivElement>(null);
+  
+  // Effect to manage time field during record editing
+  useEffect(() => {
+      if (editingRecordId && editForm.processName) {
+        const selectedTask = TASKS_WITH_TIME.find(t => t.name === editForm.processName);
+        if (selectedTask) {
+            // FIX: The type of selectedTask.time is (number | "runtime").
+            // In this block, it's narrowed to `number`, but TypeScript fails to infer this
+            // inside the setState callback. Assigning it to a `const` variable helps the compiler.
+            const taskTime = selectedTask.time;
+            if(taskTime === 'runtime') {
+                setIsEditTimeCustom(true);
+            } else {
+                setIsEditTimeCustom(false);
+                setEditForm(prev => ({...prev, totalUtilization: taskTime}));
+            }
+        }
+      }
+  }, [editForm.processName, editingRecordId]);
 
   // --- Data Aggregation ---
   
@@ -188,13 +208,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const startEditing = (record: ProductionRecord) => {
     setEditingRecordId(record.id);
     setEditForm({ ...record });
+    const task = TASKS_WITH_TIME.find(t => t.name === record.processName);
+    setIsEditTimeCustom(task?.time === 'runtime');
   };
 
   const saveEdit = () => {
     if (editingRecordId && editForm) {
       const util = Number(editForm.totalUtilization);
-      if (util < 0.02 || util > 8) {
-        alert("Utilization must be between 0.02 and 8");
+      if (util <= 0 || util > 8) {
+        alert("Utilization must be greater than 0 and no more than 8");
         return;
       }
       onUpdateRecord(editForm as ProductionRecord);
@@ -368,7 +390,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="glass rounded-xl p-6 border border-mac-border/50 shadow-lg lg:col-span-2">
                   <h3 className="text-lg font-semibold mb-6 flex items-center text-white">
                      <span className="w-1 h-6 bg-green-500 rounded-full mr-3"></span>
-                     Process Composition
+                     Task Composition
                   </h3>
                   <div className="h-[500px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -585,7 +607,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <table className="min-w-full divide-y divide-mac-border/50">
                 <thead className="bg-mac-surface/50 sticky top-0 backdrop-blur-md z-10">
                   <tr>
-                    {['Process/Task', 'Team', 'User', 'Freq', 'Util', 'Date', 'Count', 'Remarks', 'Actions'].map(h => (
+                    {['Task', 'Team', 'User', 'Freq', 'Util', 'Date', 'Count', 'Remarks', 'Actions'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -598,7 +620,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <>
                           <td className="px-4 py-3">
                              <select className={`${selectClass} w-32`} value={editForm.processName} onChange={e => setEditForm({...editForm, processName: e.target.value, task: e.target.value})}>
-                               {COMBINED_WORK_TYPES.map(p => <option key={p} value={p} className="bg-mac-bg text-white">{p}</option>)}
+                               {TASKS_WITH_TIME.map(p => <option key={p.name} value={p.name} className="bg-mac-bg text-white">{p.name}</option>)}
                              </select>
                           </td>
                           <td className="px-4 py-3">
@@ -612,7 +634,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                {FREQUENCIES.map(f => <option key={f} value={f} className="bg-mac-bg text-white">{f}</option>)}
                              </select>
                           </td>
-                          <td className="px-4 py-3"><input type="number" step="0.01" className="bg-mac-bg border border-mac-border rounded px-1 w-16 text-xs text-white" value={editForm.totalUtilization} onChange={e => setEditForm({...editForm, totalUtilization: Number(e.target.value)})} /></td>
+                          <td className="px-4 py-3"><input type="number" step="0.01" readOnly={!isEditTimeCustom} className={`bg-mac-bg border border-mac-border rounded px-1 w-16 text-xs text-white ${!isEditTimeCustom ? 'opacity-50 cursor-not-allowed' : ''}`} value={editForm.totalUtilization} onChange={e => setEditForm({...editForm, totalUtilization: Number(e.target.value)})} /></td>
                           <td className="px-4 py-3"><input type="date" className="bg-mac-bg border border-mac-border rounded px-1 w-full text-xs text-white [color-scheme:dark]" value={editForm.completedDate} onChange={e => setEditForm({...editForm, completedDate: e.target.value})} /></td>
                           <td className="px-4 py-3"><input type="number" className="bg-mac-bg border border-mac-border rounded px-1 w-12 text-xs text-white" value={editForm.count} onChange={e => setEditForm({...editForm, count: Number(e.target.value)})} /></td>
                           <td className="px-4 py-3"><input className="bg-mac-bg border border-mac-border rounded px-1 w-full text-xs text-white" value={editForm.remarks} onChange={e => setEditForm({...editForm, remarks: e.target.value})} /></td>

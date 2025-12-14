@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProductionRecord, User } from '../types';
-import { COMBINED_WORK_TYPES, TEAMS, FREQUENCIES } from '../constants';
+import { TASKS_WITH_TIME, TEAMS, FREQUENCIES } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 
 interface DataEntryFormProps {
@@ -10,7 +10,7 @@ interface DataEntryFormProps {
 
 export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAddRecord }) => {
   const [formData, setFormData] = useState<Partial<ProductionRecord>>({
-    processName: COMBINED_WORK_TYPES[0],
+    processName: TASKS_WITH_TIME[0].name,
     team: TEAMS[0],
     frequency: FREQUENCIES[0],
     totalUtilization: 0,
@@ -20,14 +20,37 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
   });
 
   const [customProcess, setCustomProcess] = useState('');
+  const [isTimeCustom, setIsTimeCustom] = useState(false);
+  
+  // Effect to update utilization when task changes
+  useEffect(() => {
+    const selectedTaskName = formData.processName;
+    const selectedTask = TASKS_WITH_TIME.find(t => t.name === selectedTaskName);
+    
+    if (selectedTask) {
+      // FIX: The type of selectedTask.time is (number | "runtime").
+      // In this block, it's narrowed to `number`, but TypeScript fails to infer this
+      // inside the setState callback. Assigning it to a `const` variable helps the compiler.
+      const taskTime = selectedTask.time;
+      if (taskTime === 'runtime') {
+        setIsTimeCustom(true);
+        // Reset utilization so user has to enter it
+        setFormData(prev => ({...prev, totalUtilization: 0}));
+      } else {
+        setIsTimeCustom(false);
+        setFormData(prev => ({ ...prev, totalUtilization: taskTime }));
+      }
+    }
+  }, [formData.processName]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation: Utilization
     const util = Number(formData.totalUtilization);
-    if (util < 0.02 || util > 8) {
-      alert("Error: Total Utilization must be between 0.02 and 8.");
+    if (util <= 0 || util > 8) {
+      alert("Error: Total Utilization must be greater than 0 and no more than 8.");
       return;
     }
 
@@ -80,18 +103,18 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <div>
-          <label className={labelClass}>Process / Task Name</label>
+          <label className={labelClass}>Task Name</label>
           <select
             value={formData.processName}
             onChange={e => setFormData({...formData, processName: e.target.value})}
             className={inputClass}
           >
-            {COMBINED_WORK_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+            {TASKS_WITH_TIME.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select>
           {formData.processName === 'Custom' && (
               <input 
                 type="text" 
-                placeholder="Enter custom process name"
+                placeholder="Enter custom task name"
                 value={customProcess}
                 onChange={e => setCustomProcess(e.target.value)}
                 className={`${inputClass} mt-2 border-mac-accent/50`}
@@ -111,8 +134,6 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
           </select>
         </div>
 
-        {/* Removed Task Field as requested */}
-
         <div>
           <label className={labelClass}>Frequency</label>
           <select
@@ -125,18 +146,21 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
         </div>
 
         <div>
-          <label className={labelClass}>Total Utilization (0.02 - 8)</label>
+          <label className={labelClass}>Total Utilization (Decimal Hours)</label>
           <input
             type="number"
             step="0.01"
-            min="0.02"
+            min="0.01"
             max="8"
             required
+            readOnly={!isTimeCustom}
             value={formData.totalUtilization}
-            onChange={e => setFormData({...formData, totalUtilization: parseFloat(e.target.value)})}
-            className={inputClass}
+            onChange={e => isTimeCustom && setFormData({...formData, totalUtilization: parseFloat(e.target.value)})}
+            className={`${inputClass} ${!isTimeCustom ? 'bg-mac-surface cursor-not-allowed opacity-70' : ''}`}
           />
-          <p className="text-xs text-gray-500 mt-1">Allowed range: 0.02 to 8.0</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {isTimeCustom ? 'Enter a value between 0.01 and 8.0' : 'Time is auto-calculated for this task.'}
+          </p>
         </div>
 
         <div>
