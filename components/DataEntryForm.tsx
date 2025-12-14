@@ -22,26 +22,27 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
   const [customProcess, setCustomProcess] = useState('');
   const [isTimeCustom, setIsTimeCustom] = useState(false);
   
-  // Effect to update utilization when task changes
+  // Effect to update utilization when task or count changes
   useEffect(() => {
     const selectedTaskName = formData.processName;
     const selectedTask = TASKS_WITH_TIME.find(t => t.name === selectedTaskName);
+    const count = Number(formData.count) || 0;
     
     if (selectedTask) {
-      // FIX: The type of selectedTask.time is (number | "runtime").
-      // In this block, it's narrowed to `number`, but TypeScript fails to infer this
-      // inside the setState callback. Assigning it to a `const` variable helps the compiler.
       const taskTime = selectedTask.time;
       if (taskTime === 'runtime') {
         setIsTimeCustom(true);
-        // Reset utilization so user has to enter it
+        // For runtime tasks, utilization is manually entered, so we don't multiply by count.
+        // We could either leave it as is, or reset to 0. Resetting is safer.
         setFormData(prev => ({...prev, totalUtilization: 0}));
       } else {
         setIsTimeCustom(false);
-        setFormData(prev => ({ ...prev, totalUtilization: taskTime }));
+        // The time is fixed, so we calculate it based on count.
+        const newUtilization = taskTime * count;
+        setFormData(prev => ({ ...prev, totalUtilization: newUtilization }));
       }
     }
-  }, [formData.processName]);
+  }, [formData.processName, formData.count]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,8 +50,8 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
     
     // Validation: Utilization
     const util = Number(formData.totalUtilization);
-    if (util <= 0 || util > 8) {
-      alert("Error: Total Utilization must be greater than 0 and no more than 8.");
+    if (util <= 0) {
+      alert("Error: Total Utilization must be greater than 0.");
       return;
     }
 
