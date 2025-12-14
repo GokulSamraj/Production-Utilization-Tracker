@@ -7,27 +7,31 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area
+  PieChart, Pie, Cell, AreaChart, Area, Brush
 } from 'recharts';
-import { Users, LayoutDashboard, Database, LogOut, Plus, Search, Filter, Calendar, Download, Trash2, Edit2, X, Save } from 'lucide-react';
+import { Users, LayoutDashboard, Database, LogOut, Plus, Search, Filter, Calendar, Download, Trash2, Edit2, X, Save, UserX, UserCheck } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 interface AdminDashboardProps {
+  currentUser: User;
   users: User[];
   records: ProductionRecord[];
   onAddUser: (user: User) => void;
   onUpdateUser: (user: User) => void;
+  onDeleteUser: (id: string) => void;
   onUpdateRecord: (record: ProductionRecord) => void;
   onDeleteRecord: (id: string) => void;
   onLogout: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  currentUser,
   users, 
   records, 
   onAddUser, 
   onUpdateUser, 
+  onDeleteUser,
   onUpdateRecord,
   onDeleteRecord,
   onLogout 
@@ -43,11 +47,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [overviewUserFilter, setOverviewUserFilter] = useState<string>('ALL');
   
   const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | UserRole>('ALL');
+  const [selectedUserForRecordsFilter, setSelectedUserForRecordsFilter] = useState<string | null>(null);
   
   // Editing state
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ProductionRecord>>({});
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState<Partial<User>>({});
+
+  // Deleting state
+  const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+
   const [isEditTimeCustom, setIsEditTimeCustom] = useState(false);
 
   const overviewRef = useRef<HTMLDivElement>(null);
@@ -205,14 +216,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const startEditing = (record: ProductionRecord) => {
+  const startEditingRecord = (record: ProductionRecord) => {
     setEditingRecordId(record.id);
     setEditForm({ ...record });
     const task = TASKS_WITH_TIME.find(t => t.name === record.processName);
     setIsEditTimeCustom(task?.time === 'runtime');
   };
 
-  const saveEdit = () => {
+  const saveEditRecord = () => {
     if (editingRecordId && editForm) {
       const util = Number(editForm.totalUtilization);
       if (util <= 0 || util > 8) {
@@ -224,6 +235,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setEditForm({});
     }
   };
+
+  const startEditingUser = (user: User) => {
+    setEditingUserId(user.id);
+    setEditUserForm({ ...user });
+  };
+
+  const saveEditUser = () => {
+    if (editingUserId && editUserForm) {
+      onUpdateUser(editUserForm as User);
+      setEditingUserId(null);
+      setEditUserForm({});
+    }
+  };
+
 
   const selectClass = "bg-mac-bg border border-mac-border rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-mac-accent";
 
@@ -258,7 +283,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="text-xs text-gray-500">Admin Mode</div>
+              <span className="text-sm text-gray-400 hidden sm:inline">Welcome, <span className="text-white font-medium">{currentUser.name}</span></span>
               <button onClick={onLogout} className="text-gray-400 hover:text-white transition-colors">
                 <LogOut size={18} />
               </button>
@@ -441,6 +466,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           contentStyle={{ backgroundColor: '#161b22', borderColor: '#30363d', color: '#c9d1d9', borderRadius: '8px' }}
                           itemStyle={{ color: '#fff' }}
                         />
+                        <Brush dataKey="date" height={30} stroke="#58a6ff" />
                         <Area type="monotone" dataKey="utilization" stroke="#58a6ff" fillOpacity={1} fill="url(#colorUtil)" animationDuration={2000} />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -530,32 +556,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Username</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-mac-border/50 bg-transparent">
                   {filteredUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-mac-surface/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{u.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{u.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={u.role}
-                          onChange={(e) => onUpdateUser({ ...u, role: e.target.value as UserRole })}
-                          className={`appearance-none bg-transparent border rounded px-2.5 py-1 text-xs font-medium focus:ring-2 focus:ring-mac-accent focus:outline-none cursor-pointer ${
-                            u.role === 'ADMIN' 
-                            ? 'border-purple-700 text-purple-200 bg-purple-900/20 hover:bg-purple-900/40' 
-                            : 'border-green-700 text-green-200 bg-green-900/20 hover:bg-green-900/40'
-                          }`}
-                        >
-                          <option value={UserRole.ADMIN} className="bg-mac-surface text-white">ADMIN</option>
-                          <option value={UserRole.USER} className="bg-mac-surface text-white">USER</option>
-                        </select>
-                      </td>
+                    <tr key={u.id} className={`transition-colors ${editingUserId === u.id ? 'bg-blue-900/20' : 'hover:bg-mac-surface/30'} ${u.isDisabled ? 'opacity-50' : ''}`}>
+                      {editingUserId === u.id ? (
+                        <>
+                          <td className="px-6 py-4"><input value={editUserForm.name} onChange={e => setEditUserForm({...editUserForm, name: e.target.value})} className="bg-mac-bg border border-mac-border rounded px-2 py-1 text-sm w-full" /></td>
+                          <td className="px-6 py-4"><input value={editUserForm.username} onChange={e => setEditUserForm({...editUserForm, username: e.target.value})} className="bg-mac-bg border border-mac-border rounded px-2 py-1 text-sm w-full" /></td>
+                          <td className="px-6 py-4">
+                            <select
+                              value={editUserForm.role}
+                              onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as UserRole })}
+                              className={`appearance-none bg-mac-bg border rounded px-2.5 py-1 text-xs font-medium focus:ring-2 focus:ring-mac-accent focus:outline-none cursor-pointer border-mac-border`}
+                            >
+                              <option value={UserRole.ADMIN}>ADMIN</option>
+                              <option value={UserRole.USER}>USER</option>
+                            </select>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button onClick={saveEditUser} className="text-green-400 hover:text-green-300 p-2 hover:bg-green-900/30 rounded-lg"><Save size={16}/></button>
+                              <button onClick={() => setEditingUserId(null)} className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg"><X size={16}/></button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${u.isDisabled ? 'text-gray-500' : 'text-white'}`}>
+                            {u.isDisabled && <UserX size={14} className="inline mr-1 text-gray-500" />}
+                            {u.name}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm ${u.isDisabled ? 'text-gray-600' : 'text-gray-300'}`}>{u.username}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">{u.role}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => startEditingUser(u)} className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/30 rounded-lg"><Edit2 size={16}/></button>
+                              <button onClick={() => onUpdateUser({ ...u, isDisabled: !u.isDisabled })} className={`${u.isDisabled ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'} p-2 hover:bg-yellow-900/30 rounded-lg`}>
+                                {u.isDisabled ? <UserCheck size={16}/> : <UserX size={16}/>}
+                              </button>
+                              <button onClick={() => setDeletingUser(u)} className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg"><Trash2 size={16}/></button>
+                            </div>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-6 py-8 text-center text-gray-500 text-sm">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
                         No users found matching the selected filter.
                       </td>
                     </tr>
@@ -640,7 +691,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <td className="px-4 py-3"><input className="bg-mac-bg border border-mac-border rounded px-1 w-full text-xs text-white" value={editForm.remarks} onChange={e => setEditForm({...editForm, remarks: e.target.value})} /></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex gap-2">
-                               <button onClick={saveEdit} className="text-green-400 hover:text-green-300"><Save size={16}/></button>
+                               <button onClick={saveEditRecord} className="text-green-400 hover:text-green-300"><Save size={16}/></button>
                                <button onClick={() => setEditingRecordId(null)} className="text-red-400 hover:text-red-300"><X size={16}/></button>
                             </div>
                           </td>
@@ -658,11 +709,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate" title={r.remarks}>{r.remarks}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
                              <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button onClick={() => startEditing(r)} className="text-blue-400 hover:text-blue-300"><Edit2 size={16}/></button>
+                               <button onClick={() => startEditingRecord(r)} className="text-blue-400 hover:text-blue-300"><Edit2 size={16}/></button>
                                <button 
                                  onClick={(e) => { 
                                    e.stopPropagation();
-                                   setDeleteId(r.id);
+                                   setDeleteRecordId(r.id);
                                  }} 
                                  className="text-red-400 hover:text-red-300"
                                >
@@ -689,15 +740,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <TimeStudy />
       <ChatBot records={records} />
       
-      {/* Confirmation Modal */}
+      {/* Confirmation Modals */}
       <ConfirmationModal 
-        isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        isOpen={!!deleteRecordId}
+        onClose={() => setDeleteRecordId(null)}
         onConfirm={() => {
-          if (deleteId) onDeleteRecord(deleteId);
+          if (deleteRecordId) onDeleteRecord(deleteRecordId);
+          setDeleteRecordId(null);
         }}
         title="Delete Record"
         message="Are you sure you want to delete this production record? This action cannot be undone."
+      />
+      <ConfirmationModal 
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={() => {
+          if (deletingUser) onDeleteUser(deletingUser.id);
+          setDeletingUser(null);
+        }}
+        title="Delete User"
+        message={`Are you sure you want to delete the user "${deletingUser?.name}"? This will also remove all their associated records and cannot be undone.`}
       />
     </div>
   );

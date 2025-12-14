@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { connectToDatabase } from './mongodb';
+import { User } from '../types';
 
 export default async function handler(req: Request, res: Response) {
   if (req.method !== 'POST') {
@@ -10,10 +11,14 @@ export default async function handler(req: Request, res: Response) {
     const { username, password } = req.body;
     const { db } = await connectToDatabase();
 
-    const user = await db.collection('users').findOne({ username, password });
+    const user = await db.collection<User>('users').findOne({ username, password });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    if (user.isDisabled) {
+      return res.status(403).json({ message: 'This account has been disabled.' });
     }
 
     // Don't send password back to client

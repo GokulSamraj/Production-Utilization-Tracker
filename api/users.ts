@@ -31,9 +31,28 @@ export default async function handler(req: Request, res: Response) {
         const { password, ...userWithoutPassword } = finalUser;
         return res.status(200).json(userWithoutPassword);
       }
+
+      case 'DELETE': {
+        const { id } = req.body;
+        if (!id) {
+          return res.status(400).json({ message: 'User ID is required for deletion' });
+        }
+        
+        const deleteResult = await usersCollection.deleteOne({ id: id });
+
+        if (deleteResult.deletedCount === 0) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Also delete the user's records
+        const recordsCollection = db.collection('records');
+        await recordsCollection.deleteMany({ userId: id });
+
+        return res.status(200).json({ message: 'User and their records deleted successfully' });
+      }
       
       default:
-        res.setHeader('Allow', ['POST', 'PUT']);
+        res.setHeader('Allow', ['POST', 'PUT', 'DELETE']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {

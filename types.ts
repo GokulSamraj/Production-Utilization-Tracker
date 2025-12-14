@@ -9,6 +9,7 @@ export interface User {
   password?: string; // stored plainly for demo simplicity
   role: UserRole;
   name: string;
+  isDisabled?: boolean;
 }
 
 export interface ProductionRecord {

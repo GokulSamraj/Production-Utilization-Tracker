@@ -12,6 +12,23 @@ function App() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Effect to load user from localStorage on initial render
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Effect to save user to localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  }, [user]);
+
   // Load data from the backend API on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +66,10 @@ function App() {
       }
 
       const foundUser = await response.json();
+      if (foundUser.isDisabled) {
+        setLoginError('This account has been disabled.');
+        return;
+      }
       setUser(foundUser);
       setLoginError('');
     } catch (error) {
@@ -89,6 +110,21 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to update user:', error);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setUsers(prev => prev.filter(u => u.id !== id));
+      // Also remove records associated with the deleted user
+      setRecords(prev => prev.filter(r => r.userId !== id));
+    } catch (error) {
+      console.error('Failed to delete user:', error);
     }
   };
 
@@ -144,10 +180,12 @@ function App() {
   if (user.role === UserRole.ADMIN) {
     return (
       <AdminDashboard 
+        currentUser={user}
         users={users} 
         records={records} 
         onAddUser={handleAddUser} 
         onUpdateUser={handleUpdateUser}
+        onDeleteUser={handleDeleteUser}
         onUpdateRecord={handleUpdateRecord}
         onDeleteRecord={handleDeleteRecord}
         onLogout={handleLogout} 

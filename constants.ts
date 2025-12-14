@@ -68,8 +68,7 @@ export const TASKS_WITH_TIME: TaskDefinition[] = [
     ...rawTasksFromCSV.map(t => ({
         name: t.task,
         time: parseTime(t.time)
-    })),
-    { name: 'Custom', time: 'runtime' } // Add the custom option
+    }))
 ];
 
 

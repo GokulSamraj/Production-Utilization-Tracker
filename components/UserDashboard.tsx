@@ -17,6 +17,7 @@ interface UserDashboardProps {
 export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, records, onAddRecord, onDeleteRecord, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'entry' | 'my-records'>('entry');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const myRecords = records.filter(r => r.userId === currentUser.id);
 
@@ -25,9 +26,20 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, recor
     return new Date(b.completedDate).getTime() - new Date(a.completedDate).getTime();
   });
 
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const [year, month] = e.target.value.split('-').map(Number);
+    // Note: month is 1-based from input, but 0-based in JS Date
+    setSelectedDate(new Date(year, month - 1, 2)); // Use day 2 to avoid timezone issues
+  };
+
+  const filteredRecords = myRecords.filter(r => {
+      const recordDate = new Date(r.completedDate);
+      return recordDate.getFullYear() === selectedDate.getFullYear() && recordDate.getMonth() === selectedDate.getMonth();
+  });
+
   // Simple aggregation for user chart
   const dateMap = new Map<string, number>();
-  myRecords.forEach(r => {
+  filteredRecords.forEach(r => {
     const current = dateMap.get(r.completedDate) || 0;
     dateMap.set(r.completedDate, current + r.totalUtilization);
   });
@@ -87,10 +99,19 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, recor
             <div className="lg:col-span-2 space-y-8">
                {/* Chart Section */}
                <div className="glass shadow-lg rounded-xl p-6 border border-mac-border/50">
-                <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                  My Utilization Trend
-                </h3>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                    My Utilization Trend
+                  </h3>
+                  <input 
+                      type="month" 
+                      value={`${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}`}
+                      onChange={handleMonthChange}
+                      className="bg-mac-surface text-white border border-mac-border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-mac-accent"
+                      style={{colorScheme: 'dark'}}
+                  />
+                </div>
                 {chartData.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -114,7 +135,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, recor
                   </div>
                 ) : (
                   <div className="h-32 flex items-center justify-center text-gray-500 bg-mac-bg/30 rounded-lg border border-mac-border/30 border-dashed">
-                    Start adding records to see your progress
+                    No records for the selected month.
                   </div>
                 )}
               </div>

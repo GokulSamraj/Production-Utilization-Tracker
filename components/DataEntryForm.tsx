@@ -19,7 +19,6 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
     remarks: ''
   });
 
-  const [customProcess, setCustomProcess] = useState('');
   const [isTimeCustom, setIsTimeCustom] = useState(false);
   
   // Effect to update utilization when task or count changes
@@ -38,7 +37,7 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
       } else {
         setIsTimeCustom(false);
         // The time is fixed, so we calculate it based on count.
-        const newUtilization = taskTime * count;
+        const newUtilization = parseFloat((taskTime * count).toFixed(2));
         setFormData(prev => ({ ...prev, totalUtilization: newUtilization }));
       }
     }
@@ -55,7 +54,7 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
       return;
     }
 
-    const finalProcess = formData.processName === 'Custom' ? customProcess : formData.processName;
+    const finalProcess = formData.processName;
     
     // Since we merged, we set both processName and task to the same value to maintain compatibility with charts/schema
     const finalTask = finalProcess; 
@@ -88,8 +87,6 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
       count: 1,
       remarks: ''
     }));
-    setCustomProcess('');
-    alert("Record added successfully!");
   };
 
   const inputClass = "mt-1 block w-full rounded-lg bg-mac-bg border-mac-border text-white shadow-sm focus:border-mac-accent focus:ring-mac-accent sm:text-sm p-2.5 border placeholder-gray-500 transition-colors appearance-none";
@@ -112,16 +109,6 @@ export const DataEntryForm: React.FC<DataEntryFormProps> = ({ currentUser, onAdd
           >
             {TASKS_WITH_TIME.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select>
-          {formData.processName === 'Custom' && (
-              <input 
-                type="text" 
-                placeholder="Enter custom task name"
-                value={customProcess}
-                onChange={e => setCustomProcess(e.target.value)}
-                className={`${inputClass} mt-2 border-mac-accent/50`}
-                required
-              />
-          )}
         </div>
 
         <div>
