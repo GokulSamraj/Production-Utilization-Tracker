@@ -1,5 +1,5 @@
 {
-  "name": "teamops-pro",
+  "name": "production-and-utilization-tracker",
   "version": "1.0.0",
   "description": "Production & Utilization Tracker - A comprehensive web application for tracking production metrics and utilization data",
   "main": "server.js",

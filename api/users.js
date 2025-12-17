@@ -4,9 +4,12 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'production_db';
 
 module.exports = async (req, res) => {
+  console.log('🔥 users.js called with method:', req.method);
+
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  console.log('🔥 CORS headers set with PATCH included');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -21,7 +24,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const users = await db.collection('users').find({}).project({ password: 0 }).toArray();
       res.status(200).json(users);
-    } else if (req.method === 'POST' || req.method === 'PUT') {
+    } else if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
       // Log the raw body for debugging
       console.log('Raw request body type:', typeof req.body);
       console.log('Raw request body:', req.body);
@@ -57,7 +60,7 @@ module.exports = async (req, res) => {
         const result = await db.collection('users').insertOne(body);
         await client.close();
         res.status(201).json(result);
-      } else if (req.method === 'PUT') {
+      } else if (req.method === 'PUT' || req.method === 'PATCH') {
         const id = body.id;
         if (!id) {
           await client.close();
@@ -67,8 +70,10 @@ module.exports = async (req, res) => {
           });
         }
 
+        // Create update data without the immutable fields
         const updateData = { ...body };
-        delete updateData.id; // Remove id from update data
+        delete updateData.id; // Remove id from update data (used for finding)
+        delete updateData._id; // Remove MongoDB's _id from update data (immutable)
 
         console.log('Updating user:', id);
         console.log('Update data:', updateData);
@@ -77,6 +82,9 @@ module.exports = async (req, res) => {
           { id: id },
           { $set: updateData }
         );
+
+        // Get the updated user to return to frontend
+        const updatedUser = await db.collection('users').findOne({ id: id }, { projection: { password: 0 } });
 
         await client.close();
 
@@ -88,13 +96,14 @@ module.exports = async (req, res) => {
           });
         }
 
-        res.status(200).json({
-          message: 'User updated successfully',
-          result: {
-            matchedCount: result.matchedCount,
-            modifiedCount: result.modifiedCount
-          }
-        });
+        if (!updatedUser) {
+          return res.status(500).json({
+            message: 'Failed to retrieve updated user',
+            userId: id
+          });
+        }
+
+        res.status(200).json(updatedUser);
       }
     } else {
       await client.close();

@@ -20,6 +20,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, recor
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const myRecords = records.filter(r => r.userId === currentUser.id);
+  console.log('🔥 UserDashboard - Total records:', records.length, 'My records:', myRecords.length);
 
   // Sort records by date (Newest First)
   const sortedRecords = [...myRecords].sort((a, b) => {
@@ -54,7 +55,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, recor
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-lg tracking-tight">TeamOps</span>
+              <span className="font-semibold text-lg tracking-tight">Production and Utilization for Operations</span>
             </div>
             
             <div className="flex space-x-1 bg-mac-surface/50 p-1 rounded-lg border border-mac-border/50">

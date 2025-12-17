@@ -24,7 +24,51 @@ module.exports = async (req, res) => {
     } else if (req.method === 'POST') {
       const newRecord = req.body;
       const result = await db.collection('records').insertOne(newRecord);
-      res.status(201).json(result);
+
+      // Get the inserted record to return to frontend
+      const insertedRecord = await db.collection('records').findOne({ _id: result.insertedId });
+
+      await client.close();
+
+      if (!insertedRecord) {
+        return res.status(500).json({
+          message: 'Failed to retrieve inserted record',
+          insertedId: result.insertedId
+        });
+      }
+
+      res.status(201).json(insertedRecord);
+    } else if (req.method === 'DELETE') {
+      const { id } = req.body;
+
+      if (!id) {
+        await client.close();
+        return res.status(400).json({
+          message: 'Record ID is required for deletion',
+          receivedBody: req.body
+        });
+      }
+
+      console.log('Deleting record with ID:', id);
+
+      const result = await db.collection('records').deleteOne({ id: id });
+
+      await client.close();
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          message: 'Record not found',
+          recordId: id,
+          result: result
+        });
+      }
+
+      res.status(200).json({
+        message: 'Record deleted successfully',
+        result: {
+          deletedCount: result.deletedCount
+        }
+      });
     } else {
       res.status(405).json({ message: 'Method not allowed' });
     }

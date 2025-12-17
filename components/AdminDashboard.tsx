@@ -258,7 +258,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-lg tracking-tight">TeamOps <span className="text-mac-accent">Pro</span></span>
+              <span className="font-semibold text-lg tracking-tight">Production and Utilization <span className="text-mac-accent">for Operations</span></span>
             </div>
             
             <div className="flex space-x-1 bg-mac-surface/50 p-1 rounded-lg border border-mac-border/50">
@@ -594,7 +594,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => startEditingUser(u)} className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-900/30 rounded-lg"><Edit2 size={16}/></button>
-                              <button onClick={() => onUpdateUser({ ...u, isDisabled: !u.isDisabled })} className={`${u.isDisabled ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'} p-2 hover:bg-yellow-900/30 rounded-lg`}>
+                              <button
+                                onClick={() => onUpdateUser({ ...u, isDisabled: !u.isDisabled })}
+                                className={`${u.isDisabled ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'} p-2 hover:bg-yellow-900/30 rounded-lg transition-all`}
+                                title={u.isDisabled ? 'Enable User Account' : 'Disable User Account'}
+                              >
                                 {u.isDisabled ? <UserCheck size={16}/> : <UserX size={16}/>}
                               </button>
                               <button onClick={() => setDeletingUser(u)} className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/30 rounded-lg"><Trash2 size={16}/></button>

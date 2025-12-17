@@ -21,7 +21,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
         <div className="p-10">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-mac-text tracking-tight">
-              Welcome Back
+              Welcome Executive
             </h2>
             <p className="mt-2 text-sm text-gray-500">
               Enter your credentials to access the dashboard
@@ -31,14 +31,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-1">E-Mail Id</label>
                 <input
                   id="username"
                   name="username"
                   type="text"
                   required
                   className="appearance-none block w-full px-4 py-3 bg-mac-bg border border-mac-border rounded-lg placeholder-gray-600 text-mac-text focus:outline-none focus:ring-2 focus:ring-mac-accent focus:border-transparent transition duration-200"
-                  placeholder="admin"
+                  placeholder="mail@lmes.in"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -68,7 +68,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
             </button>
             
             <div className="text-center text-xs text-gray-600 mt-4">
-              Admin Demo: admin / password123
+              Contact Praveen (praveen_k@lmes.in) for dashboard issue and access
             </div>
           </form>
         </div>

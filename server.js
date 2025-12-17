@@ -2,25 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const tsNode = require('ts-node');
 
-// Register TypeScript compiler
-tsNode.register({
-  transpileOnly: true,
-  compilerOptions: {
-    target: 'es2020',
-    module: 'commonjs',
-    moduleResolution: 'node',
-    esModuleInterop: true,
-    allowSyntheticDefaultImports: true,
-  },
-});
-
-// Import API routes (TypeScript files)
-const loginRoute = require('./api/login.ts').default;
-const usersRoute = require('./api/users.ts').default;
-const recordsRoute = require('./api/records.ts').default;
-const dataRoute = require('./api/data.ts').default;
+// Import API routes (JavaScript files)
+const loginRoute = require('./api/login');
+const usersRoute = require('./api/users');
+const recordsRoute = require('./api/records');
+const dataRoute = require('./api/data');
 
 const app = express();
 const PORT = 3000;
